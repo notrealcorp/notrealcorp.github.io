@@ -514,12 +514,21 @@ footer {
   text-transform: uppercase;
 }
 .hero-headline .h-display .line { display: block; overflow: hidden; }
-.hero-headline .h-display .line span {
+.hero-headline .h-display .line > span {
   display: block;
   transform: translateY(110%);
-  animation: lineUp 900ms var(--ease-snap) forwards;
 }
-.hero-headline .h-display .line:nth-child(2) span { animation-delay: 90ms; }
+body.revealed .hero-headline .h-display .line > span { animation: lineUp 900ms var(--ease-snap) forwards; }
+body.revealed .hero-headline .h-display .line:nth-child(2) > span { animation-delay: 90ms; }
+
+/* per-character split (applied by main.js) */
+.hero-headline .h-display.is-split .line > span { transform: none; animation: none; }
+.h-display .wd { display: inline-block; white-space: nowrap; }
+.h-display .ch { display: inline-block; transform: translateY(115%); }
+body.revealed .h-display .ch {
+  animation: lineUp 1000ms var(--ease-snap) forwards;
+  animation-delay: calc(80ms + var(--i) * 22ms);
+}
 @keyframes lineUp { to { transform: translateY(0); } }
 
 .hero-headline .h-display .accent { color: var(--blue); }
@@ -857,3 +866,319 @@ footer {
 }
 .contact-meta-item .spec-label { display: block; margin-bottom: 6px; }
 .contact-meta-item .spec-value { font-size: 1rem; }
+
+/* =====================================================================
+   MOTION LAYER
+   Everything below is progressive enhancement driven by main.js.
+   ===================================================================== */
+
+/* ---------- Lenis smooth scroll ---------- */
+html.lenis, html.lenis body { height: auto; }
+.lenis.lenis-smooth { scroll-behavior: auto !important; }
+.lenis.lenis-stopped { overflow: hidden; }
+
+/* ---------- Loader letters ---------- */
+.lm-text { display: inline-flex; overflow: hidden; }
+.lm-text span {
+  display: inline-block;
+  transform: translateY(110%);
+  animation: lineUp 700ms var(--ease-snap) forwards;
+  animation-delay: calc(var(--i) * 35ms);
+}
+
+/* ---------- Page transition curtain ---------- */
+html.nr-enter::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background: var(--blue);
+  z-index: 599;
+}
+.curtain {
+  position: fixed;
+  inset: 0;
+  z-index: 600;
+  background: var(--blue);
+  transform: translateY(100%);
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.curtain span {
+  font-family: var(--font-display);
+  font-size: clamp(1.4rem, 4vw, 2.6rem);
+  color: var(--white);
+  letter-spacing: -0.01em;
+  opacity: 0;
+  transform: translateY(20px);
+  transition: opacity 300ms var(--ease-out), transform 500ms var(--ease-out);
+}
+.curtain.is-in    { transform: translateY(0); transition: transform 620ms var(--ease-snap); pointer-events: all; }
+.curtain.is-in span { opacity: 1; transform: none; transition-delay: 220ms; }
+.curtain.is-cover { transform: translateY(0); transition: none; }
+.curtain.is-cover span { opacity: 1; transform: none; transition: none; }
+.curtain.is-out   { transform: translateY(-100%); transition: transform 760ms var(--ease-snap); }
+.curtain.is-out span { opacity: 0; transform: translateY(-20px); }
+
+/* ---------- Scroll progress ---------- */
+.scroll-progress {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 3px;
+  background: var(--blue);
+  transform-origin: left;
+  transform: scaleX(0);
+  z-index: 102;
+  pointer-events: none;
+}
+
+/* ---------- Nav hide/show ---------- */
+.nav {
+  transition: transform 450ms var(--ease-snap), box-shadow 300ms var(--ease-out);
+}
+.nav.scrolled { box-shadow: 0 10px 30px -18px rgba(10,10,10,.45); }
+.nav.nav-hidden { transform: translateY(-100%); }
+
+/* ---------- Custom cursor ---------- */
+.has-cursor, .has-cursor * { cursor: none !important; }
+.cursor-dot, .cursor-ring {
+  position: fixed;
+  top: 0; left: 0;
+  pointer-events: none;
+  z-index: 700;
+  mix-blend-mode: difference;
+  will-change: transform;
+}
+.cursor-dot {
+  width: 6px; height: 6px;
+  margin: -3px 0 0 -3px;
+  border-radius: 50%;
+  background: var(--white);
+  transition: opacity 200ms var(--ease-out);
+}
+.cursor-ring { width: 40px; height: 40px; margin: -20px 0 0 -20px; transition: opacity 250ms var(--ease-out); }
+.cursor-ring i {
+  display: block;
+  width: 100%; height: 100%;
+  border-radius: 50%;
+  border: 1.5px solid var(--white);
+  transition: transform 380ms var(--ease-out), background 250ms var(--ease-out);
+}
+.cursor-hidden .cursor-dot, .cursor-hidden .cursor-ring { opacity: 0; }
+.cursor-link .cursor-ring i { transform: scale(1.8); background: var(--white); }
+.cursor-link .cursor-dot { opacity: 0; }
+.cursor-card .cursor-ring i { transform: scale(2.4); }
+.cursor-down .cursor-ring i { transform: scale(.7); }
+.cursor-link.cursor-down .cursor-ring i { transform: scale(1.5); }
+
+/* ---------- Hero spotlight grid ---------- */
+.hero { --mx: -999px; --my: -999px; }
+.hero-grid-glow {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  background-image:
+    linear-gradient(var(--blue) 1px, transparent 1px),
+    linear-gradient(90deg, var(--blue) 1px, transparent 1px),
+    linear-gradient(var(--blue-soft), var(--blue-soft));
+  background-size: 64px 64px, 64px 64px, 100% 100%;
+  animation: gridDrift 26s linear infinite;
+  -webkit-mask-image: radial-gradient(280px circle at var(--mx) var(--my), #000 0%, rgba(0,0,0,.35) 45%, transparent 75%);
+          mask-image: radial-gradient(280px circle at var(--mx) var(--my), #000 0%, rgba(0,0,0,.35) 45%, transparent 75%);
+  opacity: 0;
+  transition: opacity 500ms var(--ease-out);
+}
+.hero.is-lit .hero-grid-glow { opacity: 1; }
+.hero.inverted .hero-grid-glow {
+  background-image:
+    linear-gradient(rgba(255,255,255,.7) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,.7) 1px, transparent 1px),
+    linear-gradient(rgba(255,255,255,.08), rgba(255,255,255,.08));
+}
+
+/* ---------- Marquee ---------- */
+.marquee {
+  background: var(--blue);
+  color: var(--white);
+  border-bottom: 2px solid var(--ink);
+  overflow: hidden;
+  padding: 22px 0;
+  position: relative;
+}
+.marquee-ink { background: var(--ink); }
+.marquee-track {
+  display: flex;
+  width: max-content;
+  will-change: transform;
+}
+.marquee-group {
+  display: flex;
+  align-items: center;
+  gap: 40px;
+  padding-right: 40px;
+  flex-shrink: 0;
+}
+.marquee-group span {
+  font-family: var(--font-display);
+  font-size: clamp(1.6rem, 4vw, 3.2rem);
+  text-transform: uppercase;
+  letter-spacing: -0.01em;
+  line-height: 1;
+  white-space: nowrap;
+}
+.marquee-group span:nth-of-type(even) {
+  color: transparent;
+  -webkit-text-stroke: 1.5px var(--white);
+}
+.marquee-group i {
+  width: 14px; height: 14px;
+  background: var(--white);
+  flex-shrink: 0;
+  animation: markerSpin 6s linear infinite;
+}
+.marquee-ink .marquee-group i { background: var(--blue); }
+@keyframes markerSpin { to { transform: rotate(360deg); } }
+
+/* ---------- Split headings (h2) ---------- */
+.split-words .w {
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: top;
+  padding-bottom: .12em;
+  margin-bottom: -.12em;
+}
+.split-words .w > span {
+  display: inline-block;
+  transform: translateY(110%) rotate(4deg);
+  transform-origin: left bottom;
+  transition: transform 900ms var(--ease-snap);
+  transition-delay: calc(var(--i) * 55ms);
+}
+.split-words.in-view .w > span { transform: none; }
+
+/* ---------- Steps ---------- */
+.steps-progress {
+  height: 4px;
+  background: var(--line);
+  margin-bottom: 24px;
+  overflow: hidden;
+}
+.steps-progress span {
+  display: block;
+  height: 100%;
+  background: var(--blue);
+  transform-origin: left;
+  transform: scaleX(0);
+}
+.no-gsap .steps-progress span { transform: none; }
+.step { overflow: hidden; isolation: isolate; }
+.step::after {
+  content: attr(data-n);
+  position: absolute;
+  right: 18px;
+  bottom: -28px;
+  font-family: var(--font-display);
+  font-size: clamp(6rem, 11vw, 9rem);
+  line-height: 1;
+  color: transparent;
+  -webkit-text-stroke: 1.5px rgba(26,46,240,.18);
+  z-index: -1;
+  transform: translateY(20px);
+  transition: transform 600ms var(--ease-snap), -webkit-text-stroke-color 300ms var(--ease-out);
+}
+.step:hover::after { transform: translateY(-14px); -webkit-text-stroke-color: rgba(255,255,255,.35); }
+.step-title { transition: transform 400ms var(--ease-out); }
+.step:hover .step-title { transform: translateX(6px); }
+
+/* ---------- Compare: highlight sweep on our column ---------- */
+.compare-table td:last-child {
+  background-image: linear-gradient(var(--blue-soft), var(--blue-soft));
+  background-repeat: no-repeat;
+  background-size: 0% 100%;
+  transition: background-size 700ms var(--ease-snap) 180ms, color 200ms var(--ease-out);
+}
+.compare-table tbody tr.visible td:last-child { background-size: 100% 100%; }
+.compare-table tbody tr:hover td:last-child { color: var(--blue); }
+
+/* ---------- CTA ---------- */
+.cta-final { overflow: hidden; }
+.cta-final .container { position: relative; z-index: 1; }
+.cta-bg-word {
+  position: absolute;
+  left: 0;
+  bottom: -0.18em;
+  font-family: var(--font-display);
+  font-size: clamp(6rem, 22vw, 20rem);
+  line-height: 1;
+  white-space: nowrap;
+  color: transparent;
+  -webkit-text-stroke: 1.5px rgba(255,255,255,.22);
+  pointer-events: none;
+  user-select: none;
+  will-change: transform;
+}
+
+/* ---------- Services ---------- */
+.price-block { transition: transform 500ms var(--ease-out), box-shadow 500ms var(--ease-out); will-change: transform; }
+.price-block.is-tilting { transition: transform 120ms linear, box-shadow 300ms var(--ease-out); box-shadow: 14px 14px 0 var(--ink); }
+.price-amount { font-variant-numeric: tabular-nums; }
+
+.offer-card li {
+  opacity: 0;
+  transform: translateX(-14px);
+  transition: opacity 500ms var(--ease-out), transform 600ms var(--ease-snap), color 280ms var(--ease-out);
+}
+.offer-card.visible li { opacity: 1; transform: none; }
+.offer-card.visible li:nth-child(1) { transition-delay: 150ms, 150ms, 0ms; }
+.offer-card.visible li:nth-child(2) { transition-delay: 220ms, 220ms, 0ms; }
+.offer-card.visible li:nth-child(3) { transition-delay: 290ms, 290ms, 0ms; }
+.offer-card.visible li:nth-child(4) { transition-delay: 360ms, 360ms, 0ms; }
+.offer-card.visible li:nth-child(5) { transition-delay: 430ms, 430ms, 0ms; }
+
+.client-tag { position: relative; overflow: hidden; isolation: isolate; }
+.client-tag::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: var(--blue);
+  transform: translateY(101%);
+  transition: transform 380ms var(--ease-snap);
+  z-index: -1;
+}
+.client-tag:hover { background: var(--white); }
+.client-tag:hover::before { transform: none; }
+
+.honesty-item { border-top: none; position: relative; }
+.honesty-item::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 2px;
+  background: var(--blue);
+  transform: scaleX(0);
+  transform-origin: left;
+  transition: transform 900ms var(--ease-snap);
+}
+.honesty-banner.visible .honesty-item::before { transform: scaleX(1); }
+.honesty-banner.visible .honesty-item:nth-child(2)::before { transition-delay: 150ms; }
+.honesty-banner.visible .honesty-item:nth-child(3)::before { transition-delay: 300ms; }
+
+/* ---------- Contact ---------- */
+.contact-email-link::after { transform: scaleX(0); transition: transform 1100ms var(--ease-snap) 350ms, background 240ms var(--ease-out); }
+.contact-email-link.visible::after { transform: scaleX(1); }
+.contact-email-link .ec { display: inline-block; }
+.contact-email-link:hover .ec { animation: ecWave 650ms var(--ease-out) both; animation-delay: calc(var(--i) * 18ms); }
+@keyframes ecWave {
+  0%, 100% { transform: none; }
+  40%      { transform: translateY(-.18em); }
+}
+
+/* ---------- Reduced motion ---------- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 1ms !important; animation-iteration-count: 1 !important; transition-duration: 1ms !important; transition-delay: 0ms !important; }
+  .hero-grid-lines, .hero-grid-glow, .marquee-group i { animation: none !important; }
+  .split-words .w > span, .h-display .ch, .lm-text span { transform: none !important; }
+  .steps-progress span { transform: none !important; }
+}

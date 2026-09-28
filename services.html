@@ -25,6 +25,7 @@
   <meta name="twitter:image" content="https://notrealcorp.github.io/twitter-image.png" />
 
   <link rel="stylesheet" href="styles.css" />
+  <script>try{if(sessionStorage.getItem('nr-nav')){document.documentElement.classList.add('nr-enter');sessionStorage.removeItem('nr-nav');}}catch(e){}</script>
 </head>
 <body class="revealed">
 
@@ -80,13 +81,25 @@
       </div>
     </header>
 
+    <!-- MARQUEE -->
+    <div class="marquee marquee-ink" aria-hidden="true">
+      <div class="marquee-track">
+        <div class="marquee-group">
+          <span>Design personnalisé</span><i></i>
+          <span>Code source livré</span><i></i>
+          <span>Paiement à la livraison</span><i></i>
+          <span>Aucun frais caché</span><i></i>
+        </div>
+      </div>
+    </div>
+
     <!-- PRICE -->
     <section>
       <div class="container">
         <div class="reveal" style="margin-bottom:48px;">
           <span class="eyebrow">L'offre</span>
-          <div class="price-block" style="margin-top:24px;">
-            <div class="price-amount">500 €</div>
+          <div class="price-block" data-tilt style="margin-top:24px;">
+            <div class="price-amount" data-count="500" data-suffix=" €">500 €</div>
             <p class="price-label">Un site complet, sur mesure, livré en moins de 3 jours.<br>Paiement à la livraison. Aucun abonnement.</p>
           </div>
         </div>
@@ -180,6 +193,9 @@
     </div>
   </footer>
 
-  <script src="main.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/lenis@1.1.13/dist/lenis.min.js" defer></script>
+  <script src="main.js" defer></script>
 </body>
 </html>

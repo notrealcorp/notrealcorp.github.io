@@ -25,12 +25,13 @@
   <meta name="twitter:image" content="https://notrealcorp.github.io/twitter-image.png" />
 
   <link rel="stylesheet" href="styles.css" />
+  <script>try{if(sessionStorage.getItem('nr-nav')){document.documentElement.classList.add('nr-enter');sessionStorage.removeItem('nr-nav');}}catch(e){}</script>
 </head>
 <body>
 
   <!-- LOADER -->
   <div class="loader">
-    <div class="loader-mark">notreal.corp</div>
+    <div class="loader-mark"><span class="lm-text" aria-label="notreal.corp"><span style="--i:0">n</span><span style="--i:1">o</span><span style="--i:2">t</span><span style="--i:3">r</span><span style="--i:4">e</span><span style="--i:5">a</span><span style="--i:6">l</span><span style="--i:7">.</span><span style="--i:8">c</span><span style="--i:9">o</span><span style="--i:10">r</span><span style="--i:11">p</span></span></div>
     <div class="loader-track"><div class="loader-fill"></div></div>
     <div class="loader-count">0%</div>
   </div>
@@ -82,6 +83,7 @@
     <!-- HERO -->
     <section class="hero">
       <div class="hero-grid-lines" aria-hidden="true"></div>
+      <div class="hero-grid-glow" aria-hidden="true"></div>
       <div class="container">
 
         <div class="hero-top">
@@ -113,6 +115,19 @@
       </div>
     </section>
 
+    <!-- MARQUEE -->
+    <div class="marquee" aria-hidden="true">
+      <div class="marquee-track">
+        <div class="marquee-group">
+          <span>Sites sur mesure</span><i></i>
+          <span>500 €</span><i></i>
+          <span>Livré en 3 jours</span><i></i>
+          <span>Code livré</span><i></i>
+          <span>Zéro abonnement</span><i></i>
+        </div>
+      </div>
+    </div>
+
     <!-- STEPS -->
     <section>
       <div class="container">
@@ -121,8 +136,10 @@
           <h2 style="margin-top:16px;">Comment ça marche</h2>
         </div>
 
+        <div class="steps-progress" aria-hidden="true"><span></span></div>
+
         <div class="steps-grid">
-          <div class="step reveal">
+          <div class="step reveal" data-n="01">
             <div class="step-number">01 / APPEL</div>
             <div class="step-title">Appel</div>
             <p class="step-desc">
@@ -131,7 +148,7 @@
             </p>
           </div>
 
-          <div class="step reveal reveal-d1">
+          <div class="step reveal reveal-d1" data-n="02">
             <div class="step-number">02 / MODIFICATIONS</div>
             <div class="step-title">Modifications</div>
             <p class="step-desc">
@@ -139,7 +156,7 @@
             </p>
           </div>
 
-          <div class="step reveal reveal-d2">
+          <div class="step reveal reveal-d2" data-n="03">
             <div class="step-number">03 / LIVRAISON</div>
             <div class="step-title">Livraison</div>
             <p class="step-desc">
@@ -202,11 +219,12 @@
 
     <!-- CTA FINAL -->
     <section class="cta-final">
+      <div class="cta-bg-word" aria-hidden="true">notreal.corp</div>
       <div class="container">
         <div class="reveal" style="max-width:640px;">
           <span class="eyebrow" style="color:#fff;">Prochaine étape</span>
           <h2 style="margin-top:16px;">Un projet en tête ?</h2>
-          <p style="margin-top:16px;font-size:1.05rem;">
+          <p class="cta-lead" style="margin-top:16px;font-size:1.05rem;">
             Décrivez-le-moi en quelques lignes. Je reviens sous 24h avec une première
             direction et une version de votre site.
           </p>
@@ -232,6 +250,9 @@
     </div>
   </footer>
 
-  <script src="main.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/gsap.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/gsap@3.12.5/dist/ScrollTrigger.min.js" defer></script>
+  <script src="https://cdn.jsdelivr.net/npm/lenis@1.1.13/dist/lenis.min.js" defer></script>
+  <script src="main.js" defer></script>
 </body>
 </html>

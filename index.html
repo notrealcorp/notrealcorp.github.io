@@ -25,7 +25,7 @@
   <meta name="twitter:image" content="https://notrealcorp.github.io/twitter-image.png" />
 
   <link rel="stylesheet" href="styles.css" />
-  <script>document.documentElement.classList.add('js');setTimeout(function(){document.documentElement.classList.add('js-done')},4000);try{if(sessionStorage.getItem('nr-nav')){document.documentElement.classList.add('nr-enter');sessionStorage.removeItem('nr-nav');}}catch(e){}</script>
+  <script>document.documentElement.classList.add('js');setTimeout(function(){document.documentElement.classList.add('js-done')},4000);</script>
 </head>
 <body>
 
@@ -76,9 +76,7 @@
     <!-- HERO -->
     <section class="hero">
       <div class="hero-grid-lines" aria-hidden="true"></div>
-      <div class="crosshair" aria-hidden="true">
-        <span class="ch-x"></span><span class="ch-y"></span><span class="ch-label">0, 0</span>
-      </div>
+      <div class="hero-orb" aria-hidden="true"></div>
       <div class="container">
 
         <div class="hero-top">
@@ -89,7 +87,6 @@
         </div>
 
         <div class="hero-headline">
-          <div class="hero-code" aria-hidden="true"><span class="hc-text"></span><span class="hc-caret"></span></div>
           <h1 class="h-display">
             <span class="line"><span>Votre site web,</span></span>
             <span class="line"><span class="accent">livré en 3 jours.</span></span>
@@ -118,10 +115,6 @@
           <div>
             <span class="eyebrow">Processus</span>
             <h2 style="margin-top:16px;">Comment ça marche</h2>
-          </div>
-          <div class="countdown" aria-hidden="true">
-            <span class="cd-label">Temps restant avant livraison</span>
-            <span class="cd-time">72:00:00</span>
           </div>
         </div>
 
@@ -208,8 +201,6 @@
 
     <!-- CTA FINAL -->
     <section class="cta-final">
-      <div class="cta-fill" aria-hidden="true"></div>
-      <div class="cta-scan" aria-hidden="true"></div>
       <div class="container">
         <div class="reveal" style="max-width:640px;">
           <span class="eyebrow" style="color:#fff;">Prochaine étape</span>

@@ -5,9 +5,11 @@ const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').match
 const finePointer  = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
 const hasGsap      = !!(window.gsap && window.ScrollTrigger) && !reduceMotion;
 const enteredViaTransition = document.documentElement.classList.contains('nr-enter');
+const $  = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => [...r.querySelectorAll(s)];
 
-if (!hasGsap) document.documentElement.classList.add('no-gsap');
 if (hasGsap) gsap.registerPlugin(ScrollTrigger);
+document.body.classList.add('revealed');
 
 /* =====================
    SMOOTH SCROLL (Lenis)
@@ -26,61 +28,38 @@ if (window.Lenis && !reduceMotion) {
 }
 
 /* =====================
-   REVEAL HOOK — everything that waits for the page to be shown
+   PAGE TRANSITION — pixel grid fills diagonally, then clears on the next page
    ===================== */
-const onRevealed = [];
-function reveal() {
-  document.body.classList.add('revealed');
-  if (lenis) lenis.start();
-  onRevealed.forEach(fn => fn());
-  if (hasGsap) ScrollTrigger.refresh();
-}
+const px = document.createElement('div');
+px.className = 'px';
+px.setAttribute('aria-hidden', 'true');
+document.body.appendChild(px);
 
-/* =====================
-   LOADER (index only — other pages reveal instantly)
-   ===================== */
-const loader = document.querySelector('.loader');
-if (loader && !enteredViaTransition && !reduceMotion) {
-  if (lenis) lenis.stop();
-  const fill  = loader.querySelector('.loader-fill');
-  const count = loader.querySelector('.loader-count');
-  let n = 0;
-  fill.classList.add('sweep');
-  const tick = setInterval(() => {
-    n = Math.min(100, n + Math.round(4 + Math.random() * 10));
-    count.textContent = n + '%';
-    if (n >= 100) {
-      clearInterval(tick);
-      setTimeout(() => {
-        loader.setAttribute('data-done', '');
-        reveal();
-        setTimeout(() => loader.remove(), 800);
-      }, 150);
+function buildPixels() {
+  const size = window.innerWidth < 700 ? 70 : 110;
+  const cols = Math.ceil(window.innerWidth / size);
+  const rows = Math.ceil(window.innerHeight / size);
+  px.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+  px.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
+  px.innerHTML = '';
+  for (let r = 0; r < rows; r++) {
+    for (let c = 0; c < cols; c++) {
+      const cell = document.createElement('i');
+      const d = ((c + r) / (cols + rows)) * 280 + Math.random() * 90;
+      cell.style.setProperty('--d', `${Math.round(d)}ms`);
+      px.appendChild(cell);
     }
-  }, 90);
-} else {
-  if (loader) loader.remove();
-  // runs once this whole file has registered its onRevealed hooks
-  queueMicrotask(reveal);
+  }
 }
-
-/* =====================
-   PAGE TRANSITIONS (blue curtain)
-   ===================== */
-const curtain = document.createElement('div');
-curtain.className = 'curtain';
-curtain.setAttribute('aria-hidden', 'true');
-curtain.innerHTML = '<span>notreal.corp</span>';
-document.body.appendChild(curtain);
 
 if (enteredViaTransition) {
-  curtain.className = 'curtain is-cover';
+  buildPixels();
+  px.className = 'px full instant';
   document.documentElement.classList.remove('nr-enter');
+  void px.offsetWidth;
   requestAnimationFrame(() => {
-    setTimeout(() => {
-      curtain.className = 'curtain is-out';
-      setTimeout(() => { curtain.className = 'curtain'; }, 800);
-    }, 120);
+    px.className = 'px';
+    setTimeout(() => { px.innerHTML = ''; }, 800);
   });
 }
 
@@ -91,19 +70,21 @@ document.addEventListener('click', e => {
   if (!a || a.target === '_blank' || a.hasAttribute('download')) return;
   const href = a.getAttribute('href');
   if (href.startsWith('mailto:') || href.startsWith('tel:') || href.startsWith('#')) return;
-  if (a.origin !== location.origin) return;
-  if (a.pathname === location.pathname) return;
+  if (a.origin !== location.origin || a.pathname === location.pathname) return;
 
   e.preventDefault();
   try { sessionStorage.setItem('nr-nav', '1'); } catch (_) {}
-  curtain.className = 'curtain is-in';
-  setTimeout(() => { location.href = a.href; }, 640);
+  buildPixels();
+  void px.offsetWidth;
+  px.className = 'px full';
+  setTimeout(() => { location.href = a.href; }, 720);
 });
 
 // back/forward cache: never come back to a covered page
 window.addEventListener('pageshow', e => {
   if (e.persisted) {
-    curtain.className = 'curtain';
+    px.className = 'px';
+    px.innerHTML = '';
     document.documentElement.classList.remove('nr-enter');
   }
 });
@@ -111,16 +92,14 @@ window.addEventListener('pageshow', e => {
 /* =====================
    BUTTON SWIPE LABEL (mirrors visible text into data-label for ::before)
    ===================== */
-document.querySelectorAll('.btn').forEach(btn => {
-  btn.setAttribute('data-label', btn.textContent.trim());
-});
+$$('.btn').forEach(btn => btn.setAttribute('data-label', btn.textContent.trim()));
 
 /* =====================
-   NAV — mobile toggle
+   NAV — mobile toggle + active link
    ===================== */
-const nav        = document.querySelector('.nav');
-const hamburger  = document.querySelector('.nav-hamburger');
-const mobileMenu = document.querySelector('.nav-mobile');
+const nav        = $('.nav');
+const hamburger  = $('.nav-hamburger');
+const mobileMenu = $('.nav-mobile');
 
 if (hamburger && mobileMenu) {
   hamburger.addEventListener('click', () => {
@@ -128,8 +107,7 @@ if (hamburger && mobileMenu) {
     mobileMenu.classList.toggle('open', open);
     hamburger.setAttribute('aria-expanded', String(open));
   });
-
-  mobileMenu.querySelectorAll('a').forEach(link => {
+  $$('a', mobileMenu).forEach(link => {
     link.addEventListener('click', () => {
       hamburger.classList.remove('open');
       mobileMenu.classList.remove('open');
@@ -138,275 +116,276 @@ if (hamburger && mobileMenu) {
   });
 }
 
-/* =====================
-   NAV — active link
-   ===================== */
 const currentFile = window.location.pathname.split('/').pop() || 'index.html';
-document.querySelectorAll('.nav-links a, .nav-mobile a').forEach(link => {
+$$('.nav-links a, .nav-mobile a').forEach(link => {
   const href = link.getAttribute('href');
-  if (href === currentFile || (currentFile === '' && href === 'index.html')) {
-    link.classList.add('active');
-  }
+  if (href === currentFile || (currentFile === '' && href === 'index.html')) link.classList.add('active');
 });
 
 /* =====================
-   SCROLL LOOP — progress bar, nav hide/show, scroll velocity
+   LOGO GLITCH — "not real"
    ===================== */
-const progress = document.createElement('div');
-progress.className = 'scroll-progress';
-progress.setAttribute('aria-hidden', 'true');
-document.body.appendChild(progress);
+function glitch(el) {
+  if (reduceMotion) return;
+  el.classList.remove('is-glitching');
+  void el.offsetWidth;
+  el.classList.add('is-glitching');
+  setTimeout(() => el.classList.remove('is-glitching'), 400);
+}
+$$('.nav-logo, .footer-logo').forEach(el => {
+  el.classList.add('glitch');
+  el.setAttribute('data-text', el.textContent.trim());
+  el.addEventListener('mouseenter', () => glitch(el));
+});
+const navLogo = $('.nav-logo');
+if (navLogo && !reduceMotion) {
+  (function loop() {
+    setTimeout(() => { glitch(navLogo); loop(); }, 5000 + Math.random() * 4000);
+  })();
+}
 
-let scrollVel = 0;
+/* =====================
+   RULER + COORDINATES (desktop design-tool chrome)
+   ===================== */
+const wideDesk = finePointer && window.matchMedia('(min-width: 1100px)').matches && !reduceMotion;
+let ruler = null, rulerMark = null, rulerVal = null, rulerMouse = null, coords = null;
+if (wideDesk) {
+  ruler = document.createElement('div');
+  ruler.className = 'ruler';
+  ruler.setAttribute('aria-hidden', 'true');
+  ruler.innerHTML = '<div class="ruler-mouse"></div><div class="ruler-mark"><span class="ruler-val">Y 0</span></div>';
+  rulerMark  = $('.ruler-mark', ruler);
+  rulerVal   = $('.ruler-val', ruler);
+  rulerMouse = $('.ruler-mouse', ruler);
+  coords = document.createElement('div');
+  coords.className = 'coords';
+  coords.setAttribute('aria-hidden', 'true');
+  document.body.append(ruler, coords);
+
+  const pad4 = n => String(Math.max(0, Math.round(n))).padStart(4, '0');
+  const setCoords = (x, y) => {
+    coords.innerHTML = `X <b>${pad4(x)}</b> &nbsp;Y <b>${pad4(y)}</b> &nbsp;${window.innerWidth}×${window.innerHeight}`;
+  };
+  setCoords(0, 0);
+  window.addEventListener('mousemove', e => {
+    rulerMouse.style.transform = `translateY(${e.clientY}px)`;
+    setCoords(e.pageX, e.pageY);
+  }, { passive: true });
+}
+
+/* =====================
+   SELECTION FRAME — hover any component, it gets selected like in Figma
+   ===================== */
+let selCurrent = null;
+let placeSel = null;
+if (finePointer && !reduceMotion) {
+  const sel = document.createElement('div');
+  sel.className = 'sel';
+  sel.setAttribute('aria-hidden', 'true');
+  sel.innerHTML = '<i></i><i></i><i></i><i></i><span class="sel-tag"></span><span class="sel-dim"></span>';
+  document.body.appendChild(sel);
+  const tag = $('.sel-tag', sel);
+  const dim = $('.sel-dim', sel);
+
+  const TARGETS = '.step, .offer-card, .price-block, .compare-wrap, .client-tag, .honesty-item, .btn, .contact-email-link, .copy-btn, .spec-cell, .polarity-btn';
+  const clean = s => s.replace(/\s+/g, ' ').trim();
+  const nameOf = el => {
+    if (el.matches('.step'))               return `Frame / ${clean($('.step-title', el).textContent)}`;
+    if (el.matches('.offer-card'))         return `Card / ${el.matches('.included') ? 'Inclus' : 'Exclus'}`;
+    if (el.matches('.price-block'))        return 'Component / Prix';
+    if (el.matches('.compare-wrap'))       return 'Table / Comparatif';
+    if (el.matches('.client-tag'))         return `Tag / ${clean(el.textContent)}`;
+    if (el.matches('.honesty-item'))       return `Item / ${clean($('strong', el).textContent)}`;
+    if (el.matches('.contact-email-link')) return 'Link / Email';
+    if (el.matches('.copy-btn'))           return 'Button / Copier';
+    if (el.matches('.spec-cell'))          return `Cell / ${clean($('.spec-label', el).textContent)}`;
+    if (el.matches('.polarity-btn'))       return 'Toggle / Mode';
+    return `Button / ${clean(el.getAttribute('data-label') || el.textContent)}`;
+  };
+
+  placeSel = (el, snap) => {
+    const r = el.getBoundingClientRect();
+    const pad = 6;
+    sel.classList.toggle('snap', snap);
+    sel.style.transform = `translate(${r.left + window.scrollX - pad}px, ${r.top + window.scrollY - pad}px)`;
+    sel.style.width  = `${r.width + pad * 2}px`;
+    sel.style.height = `${r.height + pad * 2}px`;
+    dim.textContent = `${Math.round(r.width)} × ${Math.round(r.height)}`;
+  };
+
+  document.addEventListener('mouseover', e => {
+    const t = e.target.closest(TARGETS);
+    const target = t && !t.closest('.nav') ? t : null;
+    if (target === selCurrent) return;
+    if (!target) { sel.classList.remove('on'); selCurrent = null; return; }
+    const wasOff = !sel.classList.contains('on');
+    tag.textContent = nameOf(target);
+    placeSel(target, wasOff);
+    selCurrent = target;
+    sel.classList.add('on');
+  });
+  document.addEventListener('mouseleave', () => { sel.classList.remove('on'); selCurrent = null; });
+}
+
+/* =====================
+   SCROLL LOOP — nav hide/show, ruler marker, keep selection glued
+   ===================== */
 let lastY = window.scrollY;
 let navAnchorY = window.scrollY;
-
 function scrollLoop() {
   const y = window.scrollY;
-  scrollVel = y - lastY;
+  const vel = y - lastY;
   lastY = y;
-
-  const max = document.documentElement.scrollHeight - window.innerHeight;
-  progress.style.transform = `scaleX(${max > 0 ? y / max : 0})`;
 
   if (nav) {
     nav.classList.toggle('scrolled', y > 12);
     const menuOpen = mobileMenu && mobileMenu.classList.contains('open');
-    if (y < 160 || menuOpen) {
-      nav.classList.remove('nav-hidden');
-      navAnchorY = y;
-    } else if (y - navAnchorY > 40) {
-      nav.classList.add('nav-hidden');
-      navAnchorY = y;
-    } else if (navAnchorY - y > 40) {
-      nav.classList.remove('nav-hidden');
-      navAnchorY = y;
-    } else if ((scrollVel > 0 && y < navAnchorY) || (scrollVel < 0 && y > navAnchorY)) {
-      navAnchorY = y;
-    }
+    if (y < 160 || menuOpen)            { nav.classList.remove('nav-hidden'); navAnchorY = y; }
+    else if (y - navAnchorY > 40)       { nav.classList.add('nav-hidden');    navAnchorY = y; }
+    else if (navAnchorY - y > 40)       { nav.classList.remove('nav-hidden'); navAnchorY = y; }
+    else if ((vel > 0 && y < navAnchorY) || (vel < 0 && y > navAnchorY)) navAnchorY = y;
   }
+
+  if (rulerMark) {
+    const max = document.documentElement.scrollHeight - window.innerHeight;
+    const p = max > 0 ? y / max : 0;
+    rulerMark.style.transform = `translateY(${Math.max(12, Math.min(window.innerHeight - 12, p * window.innerHeight))}px)`;
+    rulerVal.textContent = `Y ${Math.round(y)}`;
+  }
+
+  if (vel !== 0 && selCurrent && placeSel) placeSel(selCurrent, true);
   requestAnimationFrame(scrollLoop);
 }
 requestAnimationFrame(scrollLoop);
 
 /* =====================
-   CUSTOM CURSOR (desktop only)
+   HERO — skeleton → code typed → compiled into the real headline
    ===================== */
-if (finePointer && !reduceMotion) {
-  const dot  = document.createElement('div');
-  const ring = document.createElement('div');
-  dot.className  = 'cursor-dot';
-  ring.className = 'cursor-ring';
-  ring.innerHTML = '<i></i>';
-  document.body.append(dot, ring);
-  document.body.classList.add('has-cursor', 'cursor-hidden');
+const hero      = $('.hero');
+const heroTitle = $('.hero-headline .h-display');
+const heroCode  = $('.hero-code');
 
-  let mx = -100, my = -100, rx = -100, ry = -100;
-  window.addEventListener('mousemove', e => {
-    mx = e.clientX; my = e.clientY;
-    document.body.classList.remove('cursor-hidden');
-  }, { passive: true });
-  document.addEventListener('mouseleave', () => document.body.classList.add('cursor-hidden'));
-  window.addEventListener('mousedown', () => document.body.classList.add('cursor-down'));
-  window.addEventListener('mouseup',   () => document.body.classList.remove('cursor-down'));
-
-  document.addEventListener('mouseover', e => {
-    const link = e.target.closest('a, button, .magnetic');
-    const card = !link && e.target.closest('.step, .offer-card, .client-tag, .price-block, .compare-table tbody tr');
-    document.body.classList.toggle('cursor-link', !!link);
-    document.body.classList.toggle('cursor-card', !!card);
-  });
-
-  const cursorLoop = () => {
-    rx += (mx - rx) * 0.18;
-    ry += (my - ry) * 0.18;
-    dot.style.transform  = `translate3d(${mx}px, ${my}px, 0)`;
-    ring.style.transform = `translate3d(${rx}px, ${ry}px, 0)`;
-    requestAnimationFrame(cursorLoop);
-  };
-  requestAnimationFrame(cursorLoop);
+function buildHeroInstantly() {
+  if (!hero) return;
+  hero.classList.add('built-top', 'built-sub', 'built-actions');
+  if (heroTitle) heroTitle.classList.add('is-built');
+  if (heroCode) heroCode.classList.add('is-done');
 }
 
-/* =====================
-   TEXT SCRAMBLE (mono labels)
-   ===================== */
-const GLYPHS = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#%&/+';
-function scramble(el, duration = 600) {
-  if (reduceMotion) return;
-  const final = el.dataset.text || (el.dataset.text = el.textContent);
-  const start = performance.now();
-  cancelAnimationFrame(el._scr);
-  const step = now => {
-    const p = Math.min(1, (now - start) / duration);
-    const settled = Math.floor(final.length * p);
-    let out = '';
-    for (let i = 0; i < final.length; i++) {
-      const c = final[i];
-      out += (i < settled || c === ' ') ? c : GLYPHS[(Math.random() * GLYPHS.length) | 0];
+if (hero && heroTitle && heroCode && !reduceMotion) {
+  const out = $('.hc-text', heroCode);
+  const segments = [
+    ['tag', '<h1'], ['attr', ' class="hero"'], ['tag', '>'],
+    ['', 'Votre site web,'], ['tag', '<br>'],
+    ['', 'livré en 3 jours.'], ['tag', '</h1>'],
+  ];
+  let si = 0, ci = 0, span = null;
+
+  const finish = () => {
+    setTimeout(() => {
+      heroCode.classList.add('is-done');
+      heroTitle.classList.add('is-built', 'is-glitch');
+      setTimeout(() => heroTitle.classList.remove('is-glitch'), 420);
+      setTimeout(() => hero.classList.add('built-sub'), 380);
+      setTimeout(() => hero.classList.add('built-actions'), 680);
+    }, 260);
+  };
+
+  const type = () => {
+    if (si >= segments.length) return finish();
+    const [cls, text] = segments[si];
+    if (ci === 0) {
+      span = document.createElement('span');
+      if (cls) span.className = cls;
+      out.appendChild(span);
     }
-    el.textContent = out;
-    if (p < 1) el._scr = requestAnimationFrame(step);
+    span.textContent += text[ci++];
+    if (ci >= text.length) { si++; ci = 0; }
+    setTimeout(type, cls ? 9 : 17 + Math.random() * 16);
   };
-  el._scr = requestAnimationFrame(step);
+
+  const start = enteredViaTransition ? 520 : 200;
+  setTimeout(() => hero.classList.add('built-top'), start);
+  setTimeout(type, start + 220);
+} else {
+  buildHeroInstantly();
 }
 
-document.querySelectorAll('.nav-links a:not(.btn)').forEach(a => {
-  a.addEventListener('mouseenter', () => scramble(a, 420));
-});
-onRevealed.push(() => {
-  document.querySelectorAll('.spec-value').forEach((el, i) => {
-    setTimeout(() => scramble(el, 700), 200 + i * 120);
-  });
-});
-
-/* =====================
-   HERO — per-character headline + spotlight grid + polarity
-   ===================== */
-const hero = document.querySelector('.hero');
-const heroTitle = document.querySelector('.hero-headline .h-display');
-
-if (heroTitle && !reduceMotion) {
-  let i = 0;
-  heroTitle.querySelectorAll('.line > span').forEach(lineSpan => {
-    const words = lineSpan.textContent.trim().split(/\s+/);
-    lineSpan.textContent = '';
-    words.forEach((word, wi) => {
-      const w = document.createElement('span');
-      w.className = 'wd';
-      [...word].forEach(ch => {
-        const c = document.createElement('span');
-        c.className = 'ch';
-        c.textContent = ch;
-        c.style.setProperty('--i', i++);
-        w.appendChild(c);
-      });
-      lineSpan.appendChild(w);
-      if (wi < words.length - 1) lineSpan.appendChild(document.createTextNode(' '));
-    });
-  });
-  heroTitle.classList.add('is-split');
-}
-
+// Crosshair + live coordinates over the hero grid
 if (hero && finePointer && !reduceMotion) {
-  hero.addEventListener('mousemove', e => {
-    const r = hero.getBoundingClientRect();
-    hero.style.setProperty('--mx', `${e.clientX - r.left}px`);
-    hero.style.setProperty('--my', `${e.clientY - r.top}px`);
-    hero.classList.add('is-lit');
-  });
-  hero.addEventListener('mouseleave', () => hero.classList.remove('is-lit'));
+  const cross = $('.crosshair', hero);
+  const label = cross && $('.ch-label', cross);
+  if (cross) {
+    hero.addEventListener('mousemove', e => {
+      const r = hero.getBoundingClientRect();
+      const x = e.clientX - r.left;
+      const y = e.clientY - r.top;
+      cross.style.setProperty('--cx', `${x}px`);
+      cross.style.setProperty('--cy', `${y}px`);
+      label.textContent = `${Math.round(x)}, ${Math.round(y)}`;
+      hero.classList.add('is-aim');
+    });
+    hero.addEventListener('mouseleave', () => hero.classList.remove('is-aim'));
+  }
 }
 
-const polarityBtn = document.querySelector('.polarity-btn');
+const polarityBtn = $('.polarity-btn');
 if (polarityBtn && hero) {
   polarityBtn.addEventListener('click', () => {
     hero.classList.toggle('inverted');
-    const label = polarityBtn.querySelector('span');
-    label.textContent = hero.classList.contains('inverted') ? 'Mode clair' : 'Mode contraste';
-    delete label.dataset.text;
-    scramble(label, 380);
+    $('span', polarityBtn).textContent = hero.classList.contains('inverted') ? 'Mode clair' : 'Mode contraste';
   });
 }
 
 /* =====================
-   MAGNETIC BUTTONS
+   HEADINGS — block wipe
    ===================== */
-if (finePointer && !reduceMotion) {
-  document.querySelectorAll('.magnetic').forEach(el => {
-    const strength = 22;
-    const settle = 'transform 500ms cubic-bezier(0.16, 1, 0.3, 1)';
-    el.style.transition = settle;
-    el.addEventListener('mousemove', e => {
-      const r = el.getBoundingClientRect();
-      const x = e.clientX - r.left - r.width / 2;
-      const y = e.clientY - r.top - r.height / 2;
-      el.style.transition = 'transform 120ms linear';
-      el.style.transform = `translate(${(x / r.width) * strength}px, ${(y / r.height) * strength}px)`;
-    });
-    el.addEventListener('mouseleave', () => {
-      el.style.transition = settle;
-      el.style.transform = '';
-    });
-  });
-}
-
-/* =====================
-   TILT (price block)
-   ===================== */
-if (finePointer && !reduceMotion) {
-  document.querySelectorAll('[data-tilt]').forEach(el => {
-    el.addEventListener('mousemove', e => {
-      const r = el.getBoundingClientRect();
-      const px = (e.clientX - r.left) / r.width - 0.5;
-      const py = (e.clientY - r.top) / r.height - 0.5;
-      el.classList.add('is-tilting');
-      el.style.transform = `perspective(900px) rotateX(${-py * 7}deg) rotateY(${px * 9}deg) translate(-6px, -6px)`;
-    });
-    el.addEventListener('mouseleave', () => {
-      el.classList.remove('is-tilting');
-      el.style.transform = '';
-    });
-  });
-}
-
-/* =====================
-   SPLIT HEADINGS (h2 word mask reveal)
-   ===================== */
+const wipes = [];
 if (!reduceMotion) {
-  document.querySelectorAll('main h2').forEach(h => {
-    const label = h.textContent.trim();
-    const words = label.split(/\s+/);
-    h.setAttribute('aria-label', label);
-    h.textContent = '';
-    words.forEach((word, i) => {
-      const w = document.createElement('span');
-      w.className = 'w';
-      w.setAttribute('aria-hidden', 'true');
-      const inner = document.createElement('span');
-      inner.textContent = word;
-      inner.style.setProperty('--i', i);
-      w.appendChild(inner);
-      h.appendChild(w);
-      if (i < words.length - 1) h.appendChild(document.createTextNode(' '));
-    });
-    h.classList.add('split-words');
+  $$('main h2, .page-hero h1, .contact-simple h1').forEach(h => {
+    if (h.closest('.cta-final')) return;
+    const w = document.createElement('span');
+    w.className = 'wipe';
+    while (h.firstChild) w.appendChild(h.firstChild);
+    h.appendChild(w);
+    wipes.push(w);
   });
 }
 
 /* =====================
-   CONTACT — email character wave
+   SERVICES — odometer price + struck "not included" items
    ===================== */
-const emailLink = document.querySelector('.contact-email-link');
-if (emailLink && !reduceMotion) {
-  const text = emailLink.textContent.trim();
-  emailLink.setAttribute('aria-label', text);
-  emailLink.textContent = '';
+const odoCols = [];
+$$('[data-odometer]').forEach(el => {
+  if (reduceMotion) return;
+  const text = el.textContent.trim();
+  el.textContent = '';
   [...text].forEach((ch, i) => {
-    const s = document.createElement('span');
-    s.className = 'ec';
-    s.setAttribute('aria-hidden', 'true');
-    s.textContent = ch;
-    s.style.setProperty('--i', i);
-    emailLink.appendChild(s);
+    if (!/\d/.test(ch)) { el.appendChild(document.createTextNode(ch)); return; }
+    const odo = document.createElement('span');
+    odo.className = 'odo';
+    odo.setAttribute('aria-hidden', 'true');
+    const col = document.createElement('span');
+    col.className = 'odo-col';
+    for (let n = 0; n < 20; n++) {
+      const d = document.createElement('span');
+      d.textContent = n % 10;
+      col.appendChild(d);
+    }
+    col.dataset.target = 10 + Number(ch);
+    col.style.setProperty('--d', `${i * 140}ms`);
+    odo.appendChild(col);
+    el.appendChild(odo);
+    odoCols.push({ el, col });
   });
-}
+});
 
-/* =====================
-   COUNT-UP
-   ===================== */
-function countUp(el) {
-  const target = parseFloat(el.dataset.count);
-  const suffix = el.dataset.suffix || '';
-  const dur = 1400;
-  const start = performance.now();
-  const step = now => {
-    const p = Math.min(1, (now - start) / dur);
-    const eased = 1 - Math.pow(1 - p, 4);
-    el.textContent = Math.round(target * eased) + suffix;
-    if (p < 1) requestAnimationFrame(step);
-  };
-  requestAnimationFrame(step);
-}
+$$('.offer-card.excluded li').forEach(li => {
+  const t = document.createElement('span');
+  t.className = 't';
+  while (li.firstChild) t.appendChild(li.firstChild);
+  li.appendChild(t);
+});
 
 /* =====================
    SCROLL REVEAL (IntersectionObserver)
@@ -416,139 +395,196 @@ const revealObserver = new IntersectionObserver(
     entries.forEach(entry => {
       if (!entry.isIntersecting) return;
       const el = entry.target;
-      el.classList.add(el.classList.contains('split-words') ? 'in-view' : 'visible');
-      if (el.dataset.count && !reduceMotion) countUp(el);
+      if (el.classList.contains('wipe')) el.classList.add('in-view');
+      else el.classList.add('visible');
+      if (el.hasAttribute('data-odometer')) {
+        odoCols.filter(o => o.el === el).forEach(({ col }) => {
+          col.style.transform = `translateY(-${col.dataset.target}em)`;
+        });
+      }
       revealObserver.unobserve(el);
     });
   },
   { threshold: 0.12, rootMargin: '0px 0px -48px 0px' }
 );
-
-onRevealed.push(() => {
-  document.querySelectorAll('.reveal, .split-words, [data-count]').forEach(el => revealObserver.observe(el));
-});
+[...$$('.reveal'), ...wipes, ...$$('[data-odometer]')].forEach(el => revealObserver.observe(el));
 
 /* =====================
-   TABLE ROW STAGGER
+   COMPARE — strike the agency, stamp our answer (price counts down)
    ===================== */
-const tableRows = document.querySelectorAll('.compare-table tbody tr');
-const table = document.querySelector('.compare-table');
-if (tableRows.length && table) {
-  const tableObserver = new IntersectionObserver(
-    entries => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          tableRows.forEach((row, i) => {
-            setTimeout(() => row.classList.add('visible'), i * 90);
-          });
-          tableObserver.disconnect();
-        }
-      });
-    },
-    { threshold: 0.2 }
-  );
+const table = $('.compare-table');
+if (table) {
+  const rows = $$('tbody tr', table);
+  let priceStamp = null;
+  rows.forEach((row, i) => {
+    const [, agency, ours] = row.cells;
+    if (agency.textContent.trim() !== ours.textContent.trim()) {
+      const s = document.createElement('span');
+      s.className = 'strike';
+      while (agency.firstChild) s.appendChild(agency.firstChild);
+      agency.appendChild(s);
+    }
+    const stamp = document.createElement('span');
+    stamp.className = 'stamp';
+    while (ours.firstChild) stamp.appendChild(ours.firstChild);
+    ours.appendChild(stamp);
+    if (i === 0 && /500/.test(stamp.textContent)) priceStamp = stamp;
+  });
+
+  const priceCountdown = () => {
+    if (!priceStamp || reduceMotion) return;
+    const from = 15000, to = 500, dur = 1100;
+    const start = performance.now();
+    const step = now => {
+      const p = Math.min(1, (now - start) / dur);
+      const eased = 1 - Math.pow(1 - p, 3);
+      priceStamp.textContent = `${Math.round(from + (to - from) * eased).toLocaleString('fr-FR')} €`;
+      if (p < 1) requestAnimationFrame(step);
+    };
+    priceStamp.textContent = `${from.toLocaleString('fr-FR')} €`;
+    setTimeout(() => requestAnimationFrame(step), 700);
+  };
+
+  const tableObserver = new IntersectionObserver(entries => {
+    if (!entries.some(e => e.isIntersecting)) return;
+    rows.forEach((row, i) => setTimeout(() => row.classList.add('visible'), i * 110));
+    priceCountdown();
+    tableObserver.disconnect();
+  }, { threshold: 0.25 });
   tableObserver.observe(table);
 }
 
 /* =====================
-   MARQUEE — infinite, reacts to scroll speed & direction
+   STEPS — 72h countdown to delivery (pinned scrollytelling on desktop)
    ===================== */
-document.querySelectorAll('.marquee').forEach(marquee => {
-  const track = marquee.querySelector('.marquee-track');
-  const group = track && track.querySelector('.marquee-group');
-  if (!group) return;
+const stepsSection = $('.steps-section');
+if (stepsSection) {
+  const cdWrap = $('.countdown', stepsSection);
+  const cdTime = $('.cd-time', stepsSection);
+  const bar    = $('.steps-progress span', stepsSection);
+  const steps  = $$('.step', stepsSection);
+  const TOTAL  = 72 * 3600;
+  const pad2 = n => String(n).padStart(2, '0');
 
-  const fill = () => {
-    while (track.children.length > 1) track.lastElementChild.remove();
-    const copies = Math.max(2, Math.ceil((window.innerWidth * 2) / group.offsetWidth) + 1);
-    for (let i = 1; i < copies; i++) track.appendChild(group.cloneNode(true));
+  const setProgress = p => {
+    const done = p >= 0.995;
+    if (cdTime) {
+      if (done) cdTime.textContent = 'LIVRÉ';
+      else {
+        const left = Math.round(TOTAL * (1 - p));
+        cdTime.textContent = `${pad2(Math.floor(left / 3600))}:${pad2(Math.floor(left % 3600 / 60))}:${pad2(left % 60)}`;
+      }
+    }
+    if (cdWrap) cdWrap.classList.toggle('is-done', done);
+    if (bar) bar.style.transform = `scaleX(${p})`;
+    const idx = p < 1 / 3 ? 0 : p < 2 / 3 ? 1 : 2;
+    steps.forEach((s, i) => {
+      s.classList.toggle('is-active', i === idx && p > 0.02);
+      s.classList.toggle('is-done', i < idx || done);
+    });
   };
-  fill();
-  if (reduceMotion) return;
 
-  let groupW = group.offsetWidth;
-  let x = 0, dir = 1, skew = 0, visible = false;
-  window.addEventListener('resize', () => { fill(); groupW = group.offsetWidth; });
-  new IntersectionObserver(([e]) => { visible = e.isIntersecting; }).observe(marquee);
-
-  const loop = () => {
-    if (visible) {
-      if (scrollVel > 0.5) dir = 1;
-      else if (scrollVel < -0.5) dir = -1;
-      const speed = (0.9 + Math.min(Math.abs(scrollVel) * 0.35, 14)) * dir;
-      x -= speed;
-      if (x <= -groupW) x += groupW;
-      if (x > 0) x -= groupW;
-      const targetSkew = Math.max(-10, Math.min(10, -scrollVel * 0.5));
-      skew += (targetSkew - skew) * 0.12;
-      track.style.transform = `translate3d(${x}px, 0, 0) skewX(${skew.toFixed(2)}deg)`;
-    }
-    requestAnimationFrame(loop);
-  };
-  requestAnimationFrame(loop);
-});
-
-/* =====================
-   GSAP SCROLL-DRIVEN SCENES
-   ===================== */
-if (hasGsap) {
-  // Hero parallax: headline drifts up and fades, grid sinks
-  if (hero) {
-    gsap.to('.hero-headline', {
-      yPercent: -22, opacity: 0.25, ease: 'none',
-      scrollTrigger: { trigger: hero, start: 'top top', end: 'bottom top', scrub: true }
+  const canPin = hasGsap && window.matchMedia('(min-width: 900px) and (min-height: 640px)').matches;
+  if (reduceMotion) {
+    setProgress(1);
+  } else if (canPin) {
+    stepsSection.classList.add('is-pinned');
+    ScrollTrigger.create({
+      trigger: stepsSection,
+      start: 'top top',
+      end: '+=180%',
+      pin: true,
+      scrub: true,
+      onUpdate: self => setProgress(self.progress),
     });
-    gsap.to('.hero-grid-lines, .hero-grid-glow', {
-      y: 120, ease: 'none',
-      scrollTrigger: { trigger: hero, start: 'top top', end: 'bottom top', scrub: true }
-    });
-  }
-
-  // Steps progress bar fills as you read through the process
-  const stepsBar = document.querySelector('.steps-progress span');
-  if (stepsBar) {
-    gsap.fromTo(stepsBar, { scaleX: 0 }, {
-      scaleX: 1, ease: 'none',
-      scrollTrigger: { trigger: '.steps-grid', start: 'top 85%', end: 'bottom 55%', scrub: 0.6 }
-    });
-  }
-
-  // CTA: huge outlined word slides across, lead text lights up word by word
-  const cta = document.querySelector('.cta-final');
-  if (cta) {
-    const bgWord = cta.querySelector('.cta-bg-word');
-    if (bgWord) {
-      gsap.fromTo(bgWord, { xPercent: 12 }, {
-        xPercent: -38, ease: 'none',
-        scrollTrigger: { trigger: cta, start: 'top bottom', end: 'bottom top', scrub: true }
-      });
-    }
-    const lead = cta.querySelector('.cta-lead');
-    if (lead) {
-      const text = lead.textContent.trim();
-      lead.setAttribute('aria-label', text);
-      lead.textContent = '';
-      text.split(/\s+/).forEach((word, i, all) => {
-        const s = document.createElement('span');
-        s.className = 'sw';
-        s.setAttribute('aria-hidden', 'true');
-        s.textContent = word;
-        lead.appendChild(s);
-        if (i < all.length - 1) lead.appendChild(document.createTextNode(' '));
-      });
-      gsap.fromTo(lead.querySelectorAll('.sw'), { opacity: 0.18 }, {
-        opacity: 1, stagger: 0.08, ease: 'none',
-        scrollTrigger: { trigger: lead, start: 'top 85%', end: 'top 45%', scrub: true }
-      });
-    }
-  }
-
-  // Services price: letters tighten as it scrolls into place
-  const price = document.querySelector('.price-amount');
-  if (price) {
-    gsap.fromTo(price, { letterSpacing: '0.08em' }, {
-      letterSpacing: '-0.02em', ease: 'none',
-      scrollTrigger: { trigger: price, start: 'top 95%', end: 'top 55%', scrub: 0.6 }
-    });
+  } else {
+    // mobile: the clock runs down on its own once the steps are on screen
+    const grid = $('.steps-grid', stepsSection);
+    const io = new IntersectionObserver(([e]) => {
+      if (!e.isIntersecting) return;
+      io.disconnect();
+      const dur = 3600, start = performance.now();
+      const tick = now => {
+        const p = Math.min(1, (now - start) / dur);
+        setProgress(p);
+        if (p < 1) requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    }, { threshold: 0.4 });
+    if (grid) io.observe(grid);
   }
 }
+
+/* =====================
+   CTA — wireframe gets rendered by a scanline
+   ===================== */
+const cta = $('.cta-final');
+if (cta && !reduceMotion) {
+  cta.classList.add('wire');
+  const io = new IntersectionObserver(([e]) => {
+    if (!e.isIntersecting) return;
+    io.disconnect();
+    cta.style.setProperty('--h', `${cta.offsetHeight}px`);
+    setTimeout(() => {
+      cta.classList.add('rendering');
+      setTimeout(() => cta.classList.remove('wire', 'rendering'), 1150);
+    }, 550);
+  }, { threshold: 0.45 });
+  io.observe(cta);
+}
+
+/* =====================
+   CONTACT — email typed out + copy button
+   ===================== */
+const emailLink = $('.contact-email-link');
+if (emailLink && !reduceMotion) {
+  const text = emailLink.textContent.trim();
+  emailLink.setAttribute('aria-label', text);
+  emailLink.textContent = '';
+  const typed = document.createTextNode('');
+  const caret = document.createElement('span');
+  caret.className = 'tcaret';
+  caret.setAttribute('aria-hidden', 'true');
+  emailLink.append(typed, caret);
+  emailLink.classList.add('is-typing');
+  let i = 0;
+  const tick = () => {
+    typed.data = text.slice(0, ++i);
+    if (i < text.length) setTimeout(tick, 26 + Math.random() * 38);
+    else {
+      emailLink.classList.remove('is-typing');
+      emailLink.classList.add('is-typed');
+      setTimeout(() => caret.remove(), 1800);
+    }
+  };
+  setTimeout(tick, enteredViaTransition ? 650 : 380);
+}
+
+const copyBtn = $('.copy-btn');
+if (copyBtn) {
+  const label = $('.copy-label', copyBtn);
+  const original = label.textContent;
+  copyBtn.addEventListener('click', () => {
+    const done = msg => {
+      label.textContent = msg;
+      copyBtn.classList.add('is-copied');
+      clearTimeout(copyBtn._t);
+      copyBtn._t = setTimeout(() => {
+        label.textContent = original;
+        copyBtn.classList.remove('is-copied');
+      }, 2200);
+    };
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(copyBtn.dataset.copy)
+        .then(() => done('Adresse copiée'))
+        .catch(() => { label.textContent = copyBtn.dataset.copy; });
+    } else {
+      label.textContent = copyBtn.dataset.copy;
+    }
+  });
+}
+
+/* =====================
+   Fonts shift layout a little — re-measure pinned scenes once loaded
+   ===================== */
+if (hasGsap) window.addEventListener('load', () => ScrollTrigger.refresh());

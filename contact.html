@@ -25,7 +25,7 @@
   <meta name="twitter:image" content="https://notrealcorp.github.io/twitter-image.png" />
 
   <link rel="stylesheet" href="styles.css" />
-  <script>try{if(sessionStorage.getItem('nr-nav')){document.documentElement.classList.add('nr-enter');sessionStorage.removeItem('nr-nav');}}catch(e){}</script>
+  <script>document.documentElement.classList.add('js');setTimeout(function(){document.documentElement.classList.add('js-done')},4000);try{if(sessionStorage.getItem('nr-nav')){document.documentElement.classList.add('nr-enter');sessionStorage.removeItem('nr-nav');}}catch(e){}</script>
 </head>
 <body class="revealed">
 
@@ -83,6 +83,10 @@
         <a href="mailto:notreal.corp7@gmail.com" class="contact-email-link reveal reveal-d3">
           notreal.corp7@gmail.com
         </a>
+
+        <button class="copy-btn reveal reveal-d3" type="button" data-copy="notreal.corp7@gmail.com">
+          <span class="copy-label">Copier l'adresse</span>
+        </button>
 
         <div class="contact-meta reveal reveal-d3">
           <div class="contact-meta-item">
